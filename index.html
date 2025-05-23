@@ -41,7 +41,7 @@
 
       console.log("🔍 SDP pronto para envio:", pc.localDescription.sdp.slice(0, 300) + "...");
 
-      const response = await fetch(`http://46.202.146.225:8889/${streamId}/whep`, {
+      const response = await fetch(`https://webrtc.invasordigital.com/${streamId}/whep`, {
         method: "POST",
         headers: { "Content-Type": "application/sdp" },
         body: pc.localDescription.sdp
