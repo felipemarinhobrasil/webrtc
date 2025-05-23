@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WHEP Player</title>
+</head>
+<body>
+  <h2>WHEP WebRTC Player</h2>
+  <video id="video" autoplay playsinline controls></video>
+
+  <script>
+    const streamId = "37cd89a5-4aa2-467d-adbb-e76a7642a124"; // substitua pelo UUID publicado
+    const videoElement = document.getElementById("video");
+
+    async function startWHEP() {
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceTransportPolicy: 'all'
+      });
+
+      pc.ontrack = (event) => {
+        console.log("🎥 Recebendo mídia:", event.track.kind);
+        videoElement.srcObject = event.streams[0];
+      };
+
+      pc.onconnectionstatechange = () => {
+        console.log("📡 Estado da conexão:", pc.connectionState);
+      };
+
+      await pc.setLocalDescription(await pc.createOffer());
+
+      await new Promise((resolve) => {
+        const timeout = setTimeout(resolve, 3000);
+        pc.onicecandidate = (event) => {
+          if (!event.candidate) {
+            clearTimeout(timeout);
+            resolve();
+          }
+        };
+      });
+
+      console.log("🔍 SDP pronto para envio:", pc.localDescription.sdp.slice(0, 300) + "...");
+
+      const response = await fetch(`http://46.202.146.225:8889/${streamId}/whep`, {
+        method: "POST",
+        headers: { "Content-Type": "application/sdp" },
+        body: pc.localDescription.sdp
+      });
+
+      if (response.status !== 201) {
+        const error = await response.text();
+        alert("❌ Erro ao negociar WHEP: " + error);
+        return;
+      }
+
+      const answer = await response.text();
+      await pc.setRemoteDescription({ type: "answer", sdp: answer });
+
+      console.log("✅ Conexão WHEP estabelecida.");
+    }
+
+    startWHEP();
+  </script>
+</body>
+</html>
